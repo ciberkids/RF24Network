@@ -16,12 +16,12 @@
 
 //#define DUAL_HEAD_RADIO
 //#define ENABLE_SLEEP_MODE  //AVR only
-#define RF24NetworkMulticast
+//#define RF24NetworkMulticast
 
 /** \def
 * Saves memory by disabling fragmentation
 */
-#define DISABLE_FRAGMENTATION
+//#define DISABLE_FRAGMENTATION
 
 /** System defines */
 

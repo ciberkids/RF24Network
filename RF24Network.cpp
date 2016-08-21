@@ -229,10 +229,12 @@ uint8_t RF24Network::update(void) {
         IF_SERIAL_DEBUG_FRAGMENTATION_L2(printf("%u: FRG Rcv frame ",millis()); const char* charPtr = reinterpret_cast<const char*>(frame_buffer); for (uint16_t i = 0; i < frame_size; i++) { printf("%02X ", charPtr[i]); }; printf("\n\r"));
       }
 #else
-//    IF_SERIAL_DEBUG(printf_P(PSTR("%lu: MAC Received on %u %s\n\r"),
-//                             millis(),
-//                             pipe_num,
-//                             header->toString()));
+   IF_SERIAL_DEBUG(printf_P(PSTR("%lu: MAC Received on %u %s\n\r"),
+                             millis(),
+                             pipe_num,
+
+                             header->toString()));
+    /*
     #if defined (SERIAL_DEBUG)
         Serial.print(millis());
         Serial.print(F(": MAC Received on "));
@@ -240,6 +242,7 @@ uint8_t RF24Network::update(void) {
         Serial.print(F(" header "));
         Serial.println(header->toString());
     #endif
+     */
 //    IF_SERIAL_DEBUG(const uint16_t *i =
 //        reinterpret_cast<const uint16_t *>(frame_buffer
 //            + sizeof(RF24NetworkHeader));
@@ -1101,6 +1104,7 @@ bool RF24Network::_write(RF24NetworkHeader &header,
   }*/
   // Otherwise send it out over the air
 
+  //Write Direct is used for sending a value directly to a node 070 is a value inserted from the write()
   if (writeDirect != 070) {
     #ifdef SERIAL_DEBUG
       Serial.println(F("RF24Network::_write (1) writeDirect != 070"));
