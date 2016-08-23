@@ -103,6 +103,10 @@ void RF24Network::begin(uint8_t _channel, uint16_t _node_address) {
 #endif
   // Set up the radio the way we want it to look
   if (_channel != USE_CURRENT_CHANNEL) {
+  #ifdef SERIAL_DEBUG
+    Serial.print(F("RF24Network::begin setting channel:"));
+    Serial.print(_channel);
+  #endif
     radio.setChannel(_channel);
   }
   //radio.enableDynamicAck();
