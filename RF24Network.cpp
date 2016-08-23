@@ -236,7 +236,6 @@ uint8_t RF24Network::update(void) {
    IF_SERIAL_DEBUG(printf_P(PSTR("%lu: MAC Received on %u %s\n\r"),
                              millis(),
                              pipe_num,
-
                              header->toString()));
     /*
     #if defined (SERIAL_DEBUG)
