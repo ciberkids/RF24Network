@@ -233,19 +233,11 @@ uint8_t RF24Network::update(void) {
         IF_SERIAL_DEBUG_FRAGMENTATION_L2(printf("%u: FRG Rcv frame ",millis()); const char* charPtr = reinterpret_cast<const char*>(frame_buffer); for (uint16_t i = 0; i < frame_size; i++) { printf("%02X ", charPtr[i]); }; printf("\n\r"));
       }
 #else
-   IF_SERIAL_DEBUG(printf_P(PSTR("%lu: MAC Received on %u %s\n\r"),
+   IF_SERIAL_DEBUG(printf_P(PSTR("%lu: MAC Received on %u, header: %s\n\r"),
                              millis(),
                              pipe_num,
                              header->toString()));
-    /*
-    #if defined (SERIAL_DEBUG)
-        Serial.print(millis());
-        Serial.print(F(": MAC Received on "));
-        Serial.print(pipe_num);
-        Serial.print(F(" header "));
-        Serial.println(header->toString());
-    #endif
-     */
+
 //    IF_SERIAL_DEBUG(const uint16_t *i =
 //        reinterpret_cast<const uint16_t *>(frame_buffer
 //            + sizeof(RF24NetworkHeader));
@@ -264,7 +256,6 @@ uint8_t RF24Network::update(void) {
     }
 
     uint8_t returnVal = header->type;
-
     // Is this for us?
   #if defined (SERIAL_DEBUG)
     Serial.print(F("RF24Network::update test: header->to_node->"));
@@ -334,74 +325,74 @@ uint8_t RF24Network::update(void) {
       }
     } else {
 
-#if defined	(RF24NetworkMulticast)
-      #if defined (SERIAL_DEBUG)
-        Serial.println("RF24Network::update RF24NetworkMulticast defined so check it!");
-        Serial.print("RF24Network::update() header: ");
-        Serial.print(header->toString());
-        Serial.print(F(", my level: "));
-        Serial.print(multicast_level);
-        Serial.print(F(", is for my level?"));
-        Serial.println(0100 * static_cast<uint16_t >(multicast_level), OCT);
-      #endif
-      if (header->to_node == ( 0100 * static_cast<uint16_t >(multicast_level))) {
+      #if defined	(RF24NetworkMulticast)
+        #if defined (SERIAL_DEBUG)
+          Serial.println("RF24Network::update RF24NetworkMulticast defined so check it!");
+          Serial.print("RF24Network::update() header: ");
+          Serial.print(header->toString());
+          Serial.print(F(", my level: "));
+          Serial.print(multicast_level);
+          Serial.print(F(", is for my level?"));
+          Serial.println(0100 * static_cast<uint16_t >(multicast_level), OCT);
+        #endif
+        if (header->to_node == ( 0100 * static_cast<uint16_t >(multicast_level))) {
 
 
-        if (header->type == NETWORK_POLL) {
-          #if defined (SERIAL_DEBUG)
-            Serial.println("NETWORK_POLL");
-          #endif
-          if (!(networkFlags & FLAG_NO_POLL) && node_address != 04444) {
-
-            header->to_node = header->from_node;
-            header->from_node = node_address;
+          if (header->type == NETWORK_POLL) {
             #if defined (SERIAL_DEBUG)
-              Serial.print(F("sendig back ack to"));
-              Serial.println(header->toString());
+              Serial.println("NETWORK_POLL");
             #endif
-            delay(parent_pipe);
-            write(header->to_node, USER_TX_TO_PHYSICAL_ADDRESS);
+            if (!(networkFlags & FLAG_NO_POLL) && node_address != 04444) {
+
+              header->to_node = header->from_node;
+              header->from_node = node_address;
+              #if defined (SERIAL_DEBUG)
+                Serial.print(F("sendig back ack to"));
+                Serial.println(header->toString());
+              #endif
+              delay(parent_pipe);
+              write(header->to_node, USER_TX_TO_PHYSICAL_ADDRESS);
+            }
+            continue;
           }
-          continue;
-        }
-        uint8_t val = enqueue(header);
+          uint8_t val = enqueue(header);
 
-        if (multicastRelay) {
-          IF_SERIAL_DEBUG_ROUTING(printf_P(PSTR(
-              "%u MAC: FWD multicast frame from 0%o to level %u\n"),
-                                           millis(),
-                                           header->from_node,
-                                           multicast_level + 1););
+          if (multicastRelay) {
+            IF_SERIAL_DEBUG_ROUTING(printf_P(PSTR(
+                "%u MAC: FWD multicast frame from 0%o to level %u\n"),
+                                             millis(),
+                                             header->from_node,
+                                             multicast_level + 1););
+            #if defined (SERIAL_DEBUG)
+              Serial.print(millis());
+              Serial.print("MAC: FWD multicast frame from ");
+              Serial.print(header->from_node, OCT);
+              Serial.print("to level ");
+              Serial.println(multicast_level + 1);
+            #endif
+            write(levelToAddress(multicast_level) << 3, 4);
+          }
+          if (val == 2) { //External data received
+            //Serial.println("ret ext multicast");
           #if defined (SERIAL_DEBUG)
-            Serial.print(millis());
-            Serial.print("MAC: FWD multicast frame from ");
-            Serial.print(header->from_node, OCT);
-            Serial.print("to level ");
-            Serial.println(multicast_level + 1);
+            Serial.println(F("Ext ret multicast"));
           #endif
-          write(levelToAddress(multicast_level) << 3, 4);
-        }
-        if (val == 2) { //External data received
-          //Serial.println("ret ext multicast");
-        #if defined (SERIAL_DEBUG)
-          Serial.println(F("Ext ret multicast"));
-        #endif
-          return EXTERNAL_DATA_TYPE;
-        }
+            return EXTERNAL_DATA_TYPE;
+          }
 
-      } else {
+        } else {
+          #if defined (SERIAL_DEBUG)
+            Serial.println(F("Routing away it isn for me"));
+          #endif
+          write(header->to_node,
+                1);  //Send it on, indicate it is a routed payload
+        }
+      #else
         #if defined (SERIAL_DEBUG)
-          Serial.println(F("Routing away it isn for me"));
+            Serial.println(F("Multicast disabled routing the frame away"));
         #endif
-        write(header->to_node,
-              1);  //Send it on, indicate it is a routed payload
-      }
-#else
-      #if defined (SERIAL_DEBUG)
-          Serial.println(F("Multicast disabled routing the frame away"));
-      #endif
       write(header->to_node,1);	//Send it on, indicate it is a routed payload
-#endif
+    #endif
     }
 
   }
@@ -576,11 +567,6 @@ uint8_t RF24Network::enqueue(RF24NetworkHeader *header) {
   IF_SERIAL_DEBUG(printf_P(PSTR("%lu: NET Enqueue @%x "),
                            millis(),
                            next_frame - frame_queue));
-  #if defined (SERIAL_DEBUG)
-    Serial.print(millis());
-    Serial.print(F(": NET Enqueue"));
-    Serial.println(next_frame - frame_queue);
-  #endif
 #if !defined ( DISABLE_FRAGMENTATION )
 
   bool isFragment = header->type == NETWORK_FIRST_FRAGMENT
